@@ -33,6 +33,66 @@ A single-file web app for quick, fun **Human Bingo** at work, school, workshops,
   - No build tools, no frameworks — just **HTML + CSS + vanilla JS**
   - **jsPDF** under the hood for crisp vector PDFs
 
+
+
+---
+
+## 🎨 Customization
+
+- **Themes:** landing page → **Theme** dropdown (Blue / Green / Purple).  
+  Stored in `localStorage` as `hb_theme`.
+- **Music:** place additional `.mp3` files in `assets/` and add options to the `<select id="musicMode">`.
+- **Prompts:** edit the `PROMPTS` array in `index.html` (search `/* Prompts (50) */`).
+
+---
+
+## 🧾 Exports
+
+- **Player → Download PDF:** one ticket per page, clean table grid; emojis are stripped for printer compatibility.
+- **Bulk → Download / Print:** two tickets per A4 page (2-up), perfect for cutting.
+- **Host → Download Excel (CSV):** columns: _Serial Number_, _Card_ (in the sequence drawn).
+
+---
+
+## 🔧 Tech
+
+- Vanilla **HTML / CSS / JavaScript**
+- **jsPDF** for vector PDFs
+
+No bundlers or frameworks required.
+
+---
+
+## 🔒 License & audio
+
+- Code: **MIT License** (feel free to use/modify with attribution).
+- Audio: ensure you have the right to use any tracks you add.  
+  The app loads local MP3s from `assets/` — swap/replace as needed.
+
+---
+
+## ✅ Accessibility & performance
+
+- High-contrast text on dark gradients
+- Large targets for buttons on mobile
+- Lightweight, single page — quick loads even offline
+
+---
+
+## 🗺️ Roadmap (nice-to-haves)
+
+- Save/restore player card state between reloads
+- Custom prompt sets (upload/import)
+- Live host display link for projectors
+
+---
+
+Made with ✨ and a dash of neon.
+
+
+
+
+
 ---
 
 
