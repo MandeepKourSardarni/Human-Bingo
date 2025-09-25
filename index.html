@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Human Bingo</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg1:#86d7ff; --bg2:#142b6f; --bg3:#6f38c5;
+    --text:#fff;
+    --panel:#223296; --panel2:#1b287a;
+    --accent:#8be9fd;
+    --ok:#74f2a3; --warn:#ffd166; --pink:#ff9ccf;
+    --radius:18px;
+    --headerH:76px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--text);
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
+    overflow:hidden; /* each screen scrolls; no page scroll */
+  }
+
+  /* Global party string lights */
+  #edgeLights{position:fixed; inset:0; pointer-events:none; z-index:0}
+
+  /* Header */
+  header{
+    position:relative; z-index:3;
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:18px clamp(16px,4vw,40px); color:#fff;
+  }
+  .brand{
+    display:flex; align-items:center; gap:12px;
+    font-family:Quicksand,Inter; font-weight:800; letter-spacing:.2px;
+    font-size:clamp(18px,3.2vw,26px); color:#fff;
+  }
+  .brand .dot{
+    width:30px; height:30px; border-radius:50%;
+    display:inline-grid; place-items:center;
+    background:conic-gradient(#ff4d4d,#ff9f1c,#ffd166,#06d6a0,#1e90ff,#c77dff,#ff4d4d);
+  }
+  .controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .btn{
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:2px solid var(--accent); color:#fff; border-radius:12px;
+    padding:10px 14px; font-weight:700; cursor:pointer;
+    transition:.12s ease transform, .2s ease background, .2s ease border-color;
+    font-family:Quicksand,Inter;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn:active{transform:translateY(0)}
+  .pill{border-radius:999px}
+  .select-wrap{position:relative; display:inline-block}
+  select.select{
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:2px solid var(--accent); border-radius:999px;
+    padding:10px 38px 10px 14px; color:#fff; font-weight:800; cursor:pointer;
+    font-family:Quicksand,Inter;
+  }
+  .select-wrap::after{content:"▾"; position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; color:#fff; opacity:.9}
+  select.select option{ color:#111; background:#fff; }
+
+  /* Router: full-viewport screens under header */
+  main.screen, section.screen{
+    position:fixed; top:var(--headerH); left:0; right:0; bottom:0;
+    overflow:auto; z-index:1; padding:16px clamp(16px,4vw,40px) 60px; color:#fff; display:none;
+  }
+  .screen.active{ display:block; }
+
+  /* Landing — centered & bigger */
+  #landing.active{ display:grid; place-items:center; }
+  .hero{
+    width:min(1040px,96vw);
+    text-align:center; color:#fff;
+    background:linear-gradient(180deg,rgba(26,35,94,.44),rgba(22,34,92,.44));
+    border:2px solid var(--accent); border-radius:22px; padding:30px 28px 28px;
+  }
+  .hero h1{margin:0 0 6px; font-family:Quicksand,Inter; font-weight:900; font-size:clamp(34px,6vw,56px); color:#fff}
+  .tag{margin:0 6px 14px; font-weight:600; color:#fff}
+  .options{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin-top:18px}
+  .choice{
+    min-height:110px; padding:22px; text-align:center; font-weight:800; color:#fff;
+    border-radius:16px; border:2px solid var(--accent);
+    background:linear-gradient(180deg,var(--panel),#1f2f85);
+    cursor:pointer; transition:.15s transform, .25s background, .25s border-color;
+  }
+  /* MAIN LABEL size bump (+2px only for Player/Host/Bulk titles) */
+  .choice strong{ font-size: calc(1em + 2px); }
+
+  .choice:hover{transform:translateY(-2px)}
+  .mini{font-size:12px; color:#fff}
+
+  /* Theme dropdown row (landing-only) */
+  .themeRow{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px}
+  .themeRow .select-wrap select{ padding:8px 32px 8px 12px; font-size:13px }
+
+  /* Bulk selection highlight */
+  .btn.selectable{min-width:64px}
+  .btn.selectable.selected{ background:linear-gradient(180deg,#2156d8,#203fb5); border-color:#fff; }
+
+  /* Card grid */
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:18px}
+  .card{
+    background:linear-gradient(180deg,#21319b,#1a2676);
+    border:1px solid #ffffff2a; border-radius:var(--radius); color:#fff; overflow:hidden;
+  }
+  .card-header{display:flex; justify-content:space-between; align-items:center; padding:14px; color:#fff}
+  .card-title{font-weight:800; color:#fff}
+  .board{padding:12px}
+  .board table{width:100%; border-collapse:separate; border-spacing:10px}
+  .board td{
+    background:linear-gradient(180deg,#2433a8,#1b2a83);
+    border:1px solid #ffffff44; border-radius:12px; padding:12px; color:#fff;
+    text-align:center; vertical-align:middle; height:56px; font-weight:700; font-size:12.5px;
+    line-height:1.2; cursor:pointer; user-select:none;
+  }
+  .board td.free{
+    background: radial-gradient(140px 70px at 50% 40%, var(--warn), var(--pink));
+    color:#160820; border-color:#ffffff66; font-weight:800; letter-spacing:.4px;
+  }
+  .board td.marked{ outline:2px solid var(--ok) }
+
+  /* Toolbars */
+  .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px; color:#fff}
+  .seg{display:flex; gap:8px; align-items:center}
+  .hint{font-size:12px; color:#fff}
+
+  /* Host */
+  .host-wrap{max-width:1100px; margin:auto; color:#fff}
+  .host-big{
+    margin-top:8px; display:grid; place-items:center; height:44vh;
+    background:linear-gradient(180deg,#2233a8,#1a2a86);
+    border:2px solid var(--accent); border-radius:22px; padding:18px; text-align:center; color:#fff;
+  }
+  .host-current{font-size:clamp(22px,3.6vw,42px); font-weight:900; color:#fff}
+  .chips{display:flex; gap:8px; flex-wrap:wrap; max-height:28vh; overflow:auto; margin-top:10px}
+  .chip{background:#20308f; border:2px solid var(--accent); border-radius:999px; padding:6px 10px; font-size:12px; color:#fff}
+
+  /* Modal */
+  .rules{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.42); backdrop-filter:blur(4px); z-index:5}
+  .sheet{
+    width:min(680px,92vw); background:linear-gradient(180deg,var(--panel),var(--panel2));
+    border:2px solid var(--accent); border-radius:20px; padding:20px; color:#fff;
+  }
+  .sheet h3{margin:0 0 10px; font-family:Quicksand,Inter; font-weight:800; color:#fff}
+  .sheet ul{margin:8px 0 0 18px}
+  .sheet .closeRow{display:flex; justify-content:flex-end; margin-top:12px}
+
+  /* Confetti */
+  .confetti{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:6}
+  .confetti span{position:absolute; width:10px; height:14px; opacity:.95; border-radius:2px; animation:fall 1200ms linear forwards}
+  @keyframes fall{to{transform:translateY(100vh) rotate(600deg); opacity:.2}}
+
+  .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+  /* Print */
+  @media print{
+    body{ overflow:visible }
+    header, #edgeLights, #landing, #player:not(.active), #host:not(.active), #bulk:not(.active) { display:none !important; }
+    .screen{ position:static; inset:auto; display:block; }
+    .card{ border:1px solid #0002 }
+    .board td{ color:#000; background:#fff; border-color:#0003 }
+    .board td.free{ background:#ffe98a !important }
+  }
+</style>
+</head>
+<body>
+  <!-- Global string lights -->
+  <canvas id="edgeLights" aria-hidden="true"></canvas>
+
+  <!-- Header -->
+  <header id="appHeader">
+    <div class="brand"><span class="dot" aria-hidden="true"></span>Human Bingo</div>
+    <div class="controls">
+      <div class="select-wrap">
+        <label class="sr-only" for="musicMode">Music</label>
+        <select id="musicMode" class="select" title="Music">
+          <option value="bensound-ukulele.mp3">Bensound Ukulele (MP3)</option>
+          <option value="unbreakableresolve.mp3">Unbreakable Resolve (MP3)</option>
+          <option value="cute.mp3">Cute (MP3)</option>
+        </select>
+      </div>
+      <button id="musicToggle" class="btn pill" type="button">Music On/Off</button>
+      <button id="resetAll" class="btn pill" type="button">Reset</button>
+      <button id="openRules" class="btn pill" type="button">Rules</button>
+    </div>
+  </header>
+
+  <!-- Landing -->
+  <main id="landing" class="screen active" aria-labelledby="hero-title">
+    <div class="hero">
+      <h1 id="hero-title">Human Bingo</h1>
+      <p class="tag">Break the ice. Build the vibe.</p>
+
+      <!-- Theme selector (landing-only) -->
+      <div class="themeRow">
+        <span class="mini">Theme:</span>
+        <div class="select-wrap">
+          <label class="sr-only" for="themeSel">Theme</label>
+          <select id="themeSel" class="select" title="Theme">
+            <option value="blue">Blue gradient</option>
+            <option value="green">Green gradient</option>
+            <option value="purple">Purple gradient</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="options">
+        <button id="goPlayer" class="choice"><strong>Player</strong><div class="mini">Pick grid on the next screen</div></button>
+        <button id="goHost"  class="choice"><strong>Host</strong><div class="mini">Draw Next • Reset • Close</div></button>
+        <button id="goBulk"  class="choice"><strong>Bulk download</strong><div class="mini">Generate printable stacks</div></button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Player -->
+  <section id="player" class="screen" aria-labelledby="player-title">
+    <h2 id="player-title" class="sr-only">Player</h2>
+    <div class="toolbar">
+      <span class="hint">Select grid:</span>
+      <div class="seg">
+        <button class="btn pill gridPick" data-size="3">3×3</button>
+        <button class="btn pill gridPick" data-size="4">4×4</button>
+        <button class="btn pill gridPick" data-size="5">5×5</button>
+      </div>
+      <div class="seg">
+        <button id="undo" class="btn pill">Undo</button>
+        <button id="resetPlayer" class="btn pill">Reset</button>
+        <button id="dlPlayer" class="btn pill">Download PDF</button>
+        <button id="closePlayer" class="btn pill">Close</button>
+      </div>
+    </div>
+    <div id="playerCard"></div>
+  </section>
+
+  <!-- Host -->
+  <section id="host" class="screen" aria-labelledby="host-title">
+    <div class="host-wrap">
+      <h2 id="host-title" class="sr-only">Host</h2>
+      <div class="toolbar">
+        <button id="drawNext" class="btn pill">Draw Next</button>
+        <button id="resetDraw" class="btn pill">Reset Draws</button>
+        <button id="dlHost" class="btn pill">Download Excel</button>
+        <button id="closeHost" class="btn pill">Close</button>
+      </div>
+      <div class="host-big"><div id="hostCurrent" class="host-current">Press “Draw Next” to begin</div></div>
+      <div class="mini" style="margin-top:8px; color:#fff">Drawn: <span id="drawnCount">0</span>/50</div>
+      <div id="calledChips" class="chips" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- Bulk -->
+  <section id="bulk" class="screen" aria-labelledby="bulk-title">
+    <h2 id="bulk-title" class="sr-only">Bulk Download</h2>
+    <div class="toolbar">
+      <div class="seg">
+        <span class="hint">Cards:</span>
+        <button class="btn pill selectable count" data-count="20" aria-pressed="false">20</button>
+        <button class="btn pill selectable count" data-count="30" aria-pressed="false">30</button>
+        <button class="btn pill selectable count" data-count="40" aria-pressed="false">40</button>
+        <button class="btn pill selectable count" data-count="50" aria-pressed="false">50</button>
+      </div>
+      <div class="seg">
+        <span class="hint">Grid:</span>
+        <button class="btn pill selectable bulkGrid" data-size="3" aria-pressed="false">3×3</button>
+        <button class="btn pill selectable bulkGrid" data-size="4" aria-pressed="false">4×4</button>
+        <button class="btn pill selectable bulkGrid" data-size="5" aria-pressed="false">5×5</button>
+      </div>
+      <div class="seg">
+        <button id="bulkMake" class="btn pill">Generate Preview</button>
+        <button id="bulkDownload" class="btn pill" style="display:none; border-color:#fff">Download / Print</button>
+        <button id="closeBulk" class="btn pill">Close</button>
+      </div>
+    </div>
+    <div id="bulkGridWrap" class="grid" aria-live="polite"></div>
+  </section>
+
+  <!-- Rules Modal -->
+  <div id="rules" class="rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="sheet">
+      <h3 id="rulesTitle">Human Bingo — Rules</h3>
+      <ul>
+        <li>Tap/click squares to mark when a prompt fits someone in the room.</li>
+        <li>FREE center on 5×5 cards. 3×3 and 4×4 have no free center.</li>
+        <li><strong>Lines:</strong> Complete any row or column to claim a line.</li>
+        <li><strong>Bottom Line:</strong> Fill the bottom row.</li>
+        <li><strong>Diagonals:</strong> Either main diagonal counts.</li>
+        <li><strong>House/Bingo:</strong> Mark every square (FREE counts).</li>
+      </ul>
+      <div class="closeRow"><button id="closeRules" class="btn pill">Close</button></div>
+    </div>
+  </div>
+
+  <!-- Confetti -->
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+
+  <!-- Local audio -->
+  <audio id="bgAudio" preload="none" loop></audio>
+
+  <!-- jsPDF (vector PDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+/* ---------- Header height -> screen fit ---------- */
+function setHeaderHeightVar(){
+  const h=document.getElementById('appHeader').offsetHeight;
+  document.documentElement.style.setProperty('--headerH', h+'px');
+}
+addEventListener('resize', setHeaderHeightVar);
+addEventListener('DOMContentLoaded', setHeaderHeightVar);
+
+/* ---------- String lights (regular colors) ---------- */
+(() => {
+  let c, ctx, dpr=1;
+  const palette=['#ff4d4d','#ff9f1c','#ffd166','#06d6a0','#1e90ff','#c77dff'];
+  function size(){
+    c=document.getElementById('edgeLights'); dpr=window.devicePixelRatio||1;
+    c.width=Math.floor(innerWidth*dpr); c.height=Math.floor(innerHeight*dpr);
+    c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px';
+    ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function draw(t){
+    if(!ctx) return requestAnimationFrame(draw);
+    const W=c.width/dpr, H=c.height/dpr; ctx.clearRect(0,0,W,H);
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(255,255,255,.22)';
+    const strings=[
+      {y:H/5.2,amp:36,phase:0},{y:H/3.1,amp:48,phase:1},{y:H/2.25,amp:60,phase:2},
+      {y:H/1.95,amp:52,phase:2.6},{y:H/1.62,amp:44,phase:1.5},{y:H/1.38,amp:36,phase:0.7}
+    ];
+    const spacing=86;
+    strings.forEach((s,i)=>{
+      ctx.beginPath();
+      for(let x=0;x<=W;x+=8){
+        const y=s.y+Math.sin((x/240)+(t/1200)+s.phase)*s.amp;
+        x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+      for(let x=0;x<=W;x+=spacing){
+        const y=s.y+Math.sin((x/240)+(t/1200)+s.phase)*s.amp;
+        const col=palette[(Math.floor(x/spacing)+i)%palette.length];
+        const pulse=(Math.sin((t/700)+x/200+i)+1)/2; const r=4.8+pulse*1.6;
+        ctx.save(); ctx.globalAlpha=.68+pulse*.22; ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=12+pulse*22;
+        ctx.beginPath(); ctx.arc(x,y,r+1.6,0,Math.PI*2); ctx.fill(); ctx.restore();
+        ctx.beginPath(); ctx.fillStyle=col; ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize', size);
+  addEventListener('DOMContentLoaded', ()=>{ size(); requestAnimationFrame(draw); });
+})();
+
+/* ---------- Prompts (50) ---------- */
+const PROMPTS=[
+  "Who is wearing mismatched socks?","Who has a pen clipped to their shirt?","Who has bright colored shoelaces?","Who has nail polish on?",
+  "Who in the room is carrying a receipt?","Who has their phone on silent right now?","Who can show a selfie with a pet?","Who is wearing a Virtusa-branded shirt?",
+  "Who is wearing red socks?","Who has a ring on their finger?","Who has more than 5 unread notifications?","Who is carrying a five dollar bill?",
+  "Who has a pen in their purse or bag?","Who has a photo of their family or kids as their wallpaper?","Knows how to read tarot","Knows ASL","Appeared in a movie",
+  "Met a celebrity","Went viral online","Owns a gaming computer","Knows how to surf","Has an unusual family tradition","Loves true crime podcasts",
+  "Likes pineapple on pizza","Been on a bad blind date","Proposed to spouse in public","Been to Disney this year","Loves roller coasters","Does Yoga",
+  "Can do a cartwheel","Rides horses","Knows martial arts","Started a club","Attended a concert this year","Has a pen pal","Spelling bee champ",
+  "Been on a road trip","Screams during scary movies","Loves karaoke","Was lead in a play","Good at escape rooms","Has been skydiving","Won an eating competition",
+  "Wearing funny socks","Won at a casino","Same birth month as you","Owns same car brand as you","Collects something","Received an award","Has performed in public"
+];
+
+/* ---------- Helpers & Router ---------- */
+const $=(s,el=document)=>el.querySelector(s);
+const $$=(s,el=document)=>Array.from(el.querySelectorAll(s));
+const rand=n=>Math.floor(Math.random()*n);
+const shuffle=a=>a.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]);
+const pickPrompts=n=>shuffle(PROMPTS.slice()).slice(0,n);
+
+const screens={landing:$('#landing'), player:$('#player'), host:$('#host'), bulk:$('#bulk')};
+function show(id){ Object.values(screens).forEach(el=>el.classList.remove('active')); screens[id].classList.add('active'); }
+
+$('#goPlayer').addEventListener('click', ()=>show('player'));
+$('#goHost').addEventListener('click', ()=>{ resetDraws(); show('host'); });
+$('#goBulk').addEventListener('click', ()=>{ $('#bulkGridWrap').innerHTML=''; $('#bulkDownload').style.display='none'; show('bulk'); });
+$('#closePlayer').addEventListener('click', ()=>show('landing'));
+$('#closeHost').addEventListener('click', ()=>show('landing'));
+$('#closeBulk').addEventListener('click', ()=>show('landing'));
+
+/* ---------- Theme system ---------- */
+const THEMES = {
+  blue:  { bg1:'#86d7ff', bg2:'#142b6f', bg3:'#6f38c5', panel:'#223296', panel2:'#1b287a', accent:'#8be9fd' },
+  green: { bg1:'#baf7d6', bg2:'#0b4f3b', bg3:'#2a9d8f', panel:'#0e5a45', panel2:'#0a4635', accent:'#9ef7c1' },
+  purple:{ bg1:'#e7ddff', bg2:'#3a2a8c', bg3:'#7b3fe4', panel:'#2f2173', panel2:'#24195b', accent:'#cbb7ff' }
+};
+function applyTheme(key){
+  const t = THEMES[key] || THEMES.blue;
+  const root = document.documentElement.style;
+  root.setProperty('--bg1', t.bg1);
+  root.setProperty('--bg2', t.bg2);
+  root.setProperty('--bg3', t.bg3);
+  root.setProperty('--panel', t.panel);
+  root.setProperty('--panel2', t.panel2);
+  root.setProperty('--accent', t.accent);
+  localStorage.setItem('hb_theme', key);
+}
+
+const themeSel = document.getElementById('themeSel');
+if(themeSel){
+  themeSel.addEventListener('change', e=>applyTheme(e.target.value));
+}
+
+/* ---------- Card factory ---------- */
+function buildBoard(size,onToggle){
+  const free=size===5; const need=size*size-(free?1:0); const prompts=pickPrompts(need);
+  const tbl=document.createElement('table'); tbl.dataset.size=String(size); let i=0;
+  for(let r=0;r<size;r++){
+    const tr=document.createElement('tr');
+    for(let c=0;c<size;c++){
+      const td=document.createElement('td'); td.dataset.r=r; td.dataset.c=c;
+      if(free && r===Math.floor(size/2) && c===Math.floor(size/2)){ td.textContent='FREE'; td.classList.add('free','marked'); }
+      else{ td.textContent=prompts[i++]; }
+      const toggle=()=>{ td.classList.toggle('marked'); onToggle && onToggle(tbl,td); };
+      td.addEventListener('click',toggle,{passive:true});
+      td.addEventListener('touchstart',toggle,{passive:true});
+      tr.appendChild(td);
+    }
+    tbl.appendChild(tr);
+  }
+  return tbl;
+}
+function makeCard(idx,size,title,onToggle){
+  const card=document.createElement('div'); card.className='card';
+  const head=document.createElement('div'); head.className='card-header';
+  head.innerHTML=`<div class="card-title">${title} <span class="mini">Card #${idx+1}</span></div><div class="mini">v2.8</div>`;
+  const body=document.createElement('div'); body.className='board';
+  body.appendChild(buildBoard(size,onToggle));
+  card.appendChild(head); card.appendChild(body);
+  return card;
+}
+
+/* ---------- Player Mode ---------- */
+let undoStack=[], playerSize=null, achieved={line:false,bottom:false,diag:false,full:false};
+function resetAchievements(){ achieved={line:false,bottom:false,diag:false,full:false}; }
+function checkAchievements(tbl){
+  const n=+tbl.dataset.size, rows=Array(n).fill(0), cols=Array(n).fill(0); let d1=0,d2=0;
+  $$('.marked',tbl).forEach(td=>{ const r=+td.dataset.r,c=+td.dataset.c; rows[r]++; cols[c]++; if(r===c) d1++; if(r+c===n-1) d2++; });
+  const total=$$('.marked',tbl).length;
+  const line=rows.some(v=>v===n)||cols.some(v=>v===n);
+  const bottom=rows[n-1]===n;
+  const diag=(d1===n||d2===n);
+  const full=(total===n*n);
+  if(bottom && !achieved.bottom){achieved.bottom=true; confetti('Bottom Line!');}
+  if(line && !achieved.line){achieved.line=true; confetti('Line Complete!');}
+  if(diag && !achieved.diag){achieved.diag=true; confetti('Diagonal!');}
+  if(full && !achieved.full){achieved.full=true; confetti('HOUSE / BINGO!');}
+}
+function renderPlayerCard(){
+  const mount=$('#playerCard'); mount.innerHTML=''; if(playerSize==null) return;
+  undoStack=[]; resetAchievements();
+  mount.appendChild(makeCard(0,playerSize,'Your Human Bingo Card',(tbl,td)=>{ undoStack.push(td); if(undoStack.length>300) undoStack.shift(); checkAchievements(tbl); }));
+}
+$('.gridPick[data-size="3"]').addEventListener('click',()=>{playerSize=3; renderPlayerCard();});
+$('.gridPick[data-size="4"]').addEventListener('click',()=>{playerSize=4; renderPlayerCard();});
+$('.gridPick[data-size="5"]').addEventListener('click',()=>{playerSize=5; renderPlayerCard();});
+$('#undo').addEventListener('click',()=>{const last=undoStack.pop(); if(last) last.classList.toggle('marked');});
+$('#resetPlayer').addEventListener('click',()=>{playerSize=null; renderPlayerCard();});
+
+/* ====== PDF: sanitize to remove emojis & unsupported glyphs ====== */
+function sanitizeForPDF(str){
+  if(!str) return '';
+  str = str.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,'-');
+  str = str.replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu,'');
+  str = str.replace(/[^\x09\x0A\x0D\x20-\x7E]/g,'');
+  return str.trim();
+}
+
+/* ====== PDF: vector table tickets (Player & Bulk) ====== */
+function extractBoardFromTable(tableEl){
+  const rows=[...tableEl.querySelectorAll('tr')];
+  const n=rows.length;
+  const data=rows.map(tr=>[...tr.children].map(td=>td.textContent.trim()));
+  return {size:n, cells:data};
+}
+
+/* Player (single ticket per page) */
+function drawTicketTablePDF(pdf, title, cells){
+  const n=cells.length;
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const outerMargin = 28;
+  const headerH = 44;
+
+  const maxW = pageW - outerMargin*2;
+  const maxH = pageH - outerMargin*2 - headerH;
+  const tableSize = Math.min(maxW, maxH);
+  const x0 = (pageW - tableSize)/2;
+  const y0 = outerMargin + headerH;
+
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(18);
+  const titleW = pdf.getTextWidth('Human Bingo');
+  pdf.text('Human Bingo', (pageW-titleW)/2, outerMargin + 18);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
+  pdf.text(sanitizeForPDF(title), outerMargin, outerMargin + 18);
+
+  const cell = tableSize / n;
+  pdf.setDrawColor(0); pdf.setLineWidth(1.2);
+  pdf.rect(x0, y0, tableSize, tableSize);
+  pdf.setLineWidth(0.6);
+  for(let i=1;i<n;i++){
+    pdf.line(x0, y0 + i*cell, x0 + tableSize, y0 + i*cell);
+    pdf.line(x0 + i*cell, y0, x0 + i*cell, y0 + tableSize);
+  }
+
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
+  const pad = 6, lineH=12;
+  for(let r=0;r<n;r++){
+    for(let c=0;c<n;c++){
+      const txt = sanitizeForPDF(cells[r][c] || '');
+      const wrapped = pdf.splitTextToSize(txt, cell - 2*pad);
+      const blockH = wrapped.length * lineH;
+      const tx = x0 + c*cell + pad;
+      const ty = y0 + r*cell + (cell - blockH)/2 + 9;
+      wrapped.forEach((line, i)=> pdf.text(line, tx, ty + i*lineH));
+    }
+  }
+}
+
+/* 2-up drawer: draw a ticket inside a given rectangle */
+function drawTicketInRect(pdf, title, cells, rx, ry, rw, rh){
+  const n=cells.length;
+  const headerH = 24;
+  const tableSize = Math.min(rw, rh - headerH);
+  const x0 = rx + (rw - tableSize)/2;
+  const y0 = ry + headerH + (rh - headerH - tableSize)/2;
+
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(12);
+  pdf.text(sanitizeForPDF(title), rx + 6, ry + 16);
+
+  const cell = tableSize / n;
+  pdf.setDrawColor(0); pdf.setLineWidth(1.1);
+  pdf.rect(x0, y0, tableSize, tableSize);
+  pdf.setLineWidth(0.55);
+  for(let i=1;i<n;i++){
+    pdf.line(x0, y0 + i*cell, x0 + tableSize, y0 + i*cell);
+    pdf.line(x0 + i*cell, y0, x0 + i*cell, y0 + tableSize);
+  }
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
+  const pad = 5, lineH=12;
+  for(let r=0;r<n;r++){
+    for(let c=0;c<n;c++){
+      const txt = sanitizeForPDF(cells[r][c] || '');
+      const wrapped = pdf.splitTextToSize(txt, cell - 2*pad);
+      const blockH = wrapped.length * lineH;
+      const tx = x0 + c*cell + pad;
+      const ty = y0 + r*cell + (cell - blockH)/2 + 9;
+      wrapped.forEach((line, i)=> pdf.text(line, tx, ty + i*lineH));
+    }
+  }
+}
+
+/* Player: Download current ticket */
+function playerDownloadPDF(){
+  const table=$('#playerCard table');
+  if(!table){ alert('Create a card first.'); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','pt','a4');
+  const {cells} = extractBoardFromTable(table);
+  drawTicketTablePDF(pdf, 'Player Ticket', cells);
+  pdf.save('human-bingo-ticket.pdf');
+}
+$('#dlPlayer').addEventListener('click', playerDownloadPDF);
+
+/* ---------- Host Mode ---------- */
+let deck=[], drawn=[];
+function resetDraws(){ deck=PROMPTS.slice(0,50); drawn=[]; $('#hostCurrent').textContent='Press “Draw Next” to begin'; $('#drawnCount').textContent='0'; $('#calledChips').innerHTML=''; }
+function drawNext(){
+  if(deck.length===0){ $('#hostCurrent').textContent='All prompts have been drawn!'; return; }
+  const idx=rand(deck.length), prompt=deck.splice(idx,1)[0]; drawn.push(prompt);
+  $('#hostCurrent').textContent=prompt; $('#drawnCount').textContent=String(drawn.length);
+  const chip=document.createElement('span'); chip.className='chip'; chip.textContent=prompt; $('#calledChips').prepend(chip);
+}
+$('#drawNext').addEventListener('click',drawNext);
+$('#resetDraw').addEventListener('click',resetDraws);
+
+/* Host: Download drawn cards as Excel (CSV) */
+function downloadHostCSV(){
+  if(drawn.length===0){ alert('Draw some cards first.'); return; }
+  const rows=[['Serial Number','Card'], ...drawn.map((p,i)=>[i+1, p])];
+  const csv='\uFEFF' + rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='human-bingo-draws.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),500);
+}
+$('#dlHost').addEventListener('click', downloadHostCSV);
+
+/* ---------- Bulk Generator ---------- */
+let bulkCount=null, bulkSize=null;
+function markSelected(groupSel, el){
+  $$(groupSel).forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
+  el.classList.add('selected'); el.setAttribute('aria-pressed','true');
+}
+$$('.count').forEach(b=>b.addEventListener('click',()=>{ bulkCount=+b.dataset.count; markSelected('.count', b); }));
+$$('.bulkGrid').forEach(b=>b.addEventListener('click',()=>{ bulkSize=+b.dataset.size; markSelected('.bulkGrid', b); }));
+
+$('#bulkMake').addEventListener('click',()=>{
+  if(!bulkCount || !bulkSize){ alert('Select both Cards and Grid.'); return; }
+  const wrap=$('#bulkGridWrap'); wrap.innerHTML='';
+  for(let i=0;i<bulkCount;i++) wrap.appendChild(makeCard(i,bulkSize,'Human Bingo',null));
+  const btn=$('#bulkDownload'); btn.style.display='inline-block'; btn.style.borderColor='#fff';
+});
+
+/* Bulk: 2-up multi-page PDF (two tickets per page), emoji-free text */
+function downloadBulkPDF(){
+  const cards = $$('#bulkGridWrap .card');
+  if(cards.length===0){ alert('Generate a preview first.'); return; }
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF('p','pt','a4');
+
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const outer = 26;
+  const gap = 18;
+  const availH = pageH - 2*outer;
+  const eachH = (availH - gap)/2;
+  const rectW = pageW - 2*outer;
+  const topRect = {x:outer, y:outer, w:rectW, h:eachH};
+  const botRect = {x:outer, y:outer+eachH+gap, w:rectW, h:eachH};
+
+  let first=true;
+  for(let i=0;i<cards.length;i+=2){
+    if(!first) pdf.addPage(); first=false;
+
+    const topTable = cards[i].querySelector('table');
+    const {cells:cellsTop} = extractBoardFromTable(topTable);
+    drawTicketInRect(pdf, `Card #${i+1}`, cellsTop, topRect.x, topRect.y, topRect.w, topRect.h);
+
+    if(i+1 < cards.length){
+      const botTable = cards[i+1].querySelector('table');
+      const {cells:cellsBot} = extractBoardFromTable(botTable);
+      drawTicketInRect(pdf, `Card #${i+2}`, cellsBot, botRect.x, botRect.y, botRect.w, botRect.h);
+    }
+  }
+
+  pdf.save('human-bingo-bulk-2up.pdf');
+}
+$('#bulkDownload').addEventListener('click', downloadBulkPDF);
+
+/* ---------- Rules, Confetti, Music, Reset ---------- */
+$('#openRules').addEventListener('click',()=>$('#rules').style.display='flex');
+$('#closeRules').addEventListener('click',()=>$('#rules').style.display='none');
+
+function confetti(msg){
+  const layer=$('#confetti'); layer.innerHTML='';
+  const banner=document.createElement('div');
+  banner.style.position='fixed'; banner.style.top='18%'; banner.style.left='50%'; banner.style.transform='translateX(-50%)';
+  banner.style.padding='14px 20px'; banner.style.border='2px solid var(--accent)'; banner.style.borderRadius='14px';
+  banner.style.background='linear-gradient(180deg,var(--panel),var(--panel2))';
+  banner.style.fontFamily='Quicksand,Inter'; banner.style.fontWeight='800'; banner.style.color='#fff'; banner.textContent=msg;
+  layer.appendChild(banner);
+  const colors=['#ff4d4d','#ffd166','#06d6a0','#1e90ff','#c77dff'];
+  for(let i=0;i<110;i++){ const s=document.createElement('span'); s.style.left=(Math.random()*100)+'vw'; s.style.top='-10px'; s.style.background=colors[i%colors.length]; s.style.animationDelay=(Math.random()*280)+'ms'; layer.appendChild(s); }
+  setTimeout(()=>{ layer.innerHTML=''; },2100);
+}
+
+const audio=$('#bgAudio'); audio.volume=0.6; let isPlaying=false;
+function setTrack(src){ audio.pause(); isPlaying=false; audio.src=src; }
+function toggleMusic(){
+  if(!audio.src){ setTrack($('#musicMode').value); }
+  if(!isPlaying){ audio.play().then(()=>{ isPlaying=true; }).catch(()=>{ alert('Could not play audio. Ensure the MP3 files are in the same folder as this HTML.'); }); }
+  else{ audio.pause(); isPlaying=false; }
+}
+$('#musicMode').addEventListener('change', e=>{ setTrack(e.target.value); if(isPlaying){ audio.play().catch(()=>{}); }});
+$('#musicToggle').addEventListener('click', toggleMusic);
+
+function resetAll(){
+  audio.pause(); isPlaying=false; $('#musicMode').value='bensound-ukulele.mp3'; setTrack('bensound-ukulele.mp3');
+  show('landing'); playerSize=null; renderPlayerCard(); resetDraws();
+  $('#bulkGridWrap').innerHTML=''; $('#bulkDownload').style.display='none';
+  $$('.count, .bulkGrid').forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
+  bulkCount=null; bulkSize=null;
+}
+$('#resetAll').addEventListener('click', resetAll);
+
+/* ---------- Init ---------- */
+document.addEventListener('DOMContentLoaded', ()=>{
+  show('landing'); resetDraws(); setTrack('bensound-ukulele.mp3');
+  setHeaderHeightVar();
+  // Theme init (persist across sessions)
+  const saved = localStorage.getItem('hb_theme') || 'blue';
+  if(themeSel){ themeSel.value = saved; }
+  applyTheme(saved);
+});
+</script>
+</body>
+</html>
