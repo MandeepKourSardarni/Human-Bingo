@@ -826,8 +826,8 @@
     function resetAll(){
       audio.pause(); isPlaying=false;
       // If you move MP3s local, you can set a matching default value here.
-      $('#musicMode').value='bensound-ukulele.mp3';  // NOTE: only effective if options use relative URLs
-      setTrack('bensound-ukulele.mp3');              // (left as-is to avoid changing behavior)
+      $('#musicMode').value='assets/bensound-ukulele.mp3';  // NOTE: only effective if options use relative URLs
+      setTrack('assets/bensound-ukulele.mp3');              // (left as-is to avoid changing behavior)
       show('landing'); playerSize=null; renderPlayerCard(); resetDraws();
       $('#bulkGridWrap').innerHTML=''; $('#bulkDownload').style.display='none';
       $$('.count, .bulkGrid').forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
@@ -841,7 +841,7 @@
     document.addEventListener('DOMContentLoaded', ()=>{
       show('landing');           // default screen
       resetDraws();              // initialize host deck
-      setTrack('bensound-ukulele.mp3'); // see note above regarding same-origin files
+      setTrack('assets/bensound-ukulele.mp3'); // see note above regarding same-origin files
       setHeaderHeightVar();
 
       // Theme init (persist across sessions)
