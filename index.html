@@ -4,34 +4,21 @@
   <!--
     Human Bingo — Single-file Web App
     -------------------------------------------------------------
-    Purpose:
-      • Ice-breaker "human bingo" game with Player, Host, and Bulk modes.
-      • Exports: vector PDFs for cards (single/2-up) and CSV for host draws.
-      • Zero build tools. Runs as a static site (GitHub Pages friendly).
-
-    Notes for maintainers:
-      • Fonts & icons are loaded from Google Fonts. All other scripts are inline.
-      • Audio sources in the <select> reference GitHub file URLs. For cross-origin
-        playback reliability, prefer hosting MP3s in the same repository/branch
-        and using relative paths (see comment near toggleMusic()).
-
-    Accessibility:
-      • Uses aria roles/labels, “sr-only” text for non-visual hints,
-        and preserves keyboard operability for buttons/selects.
+    Modes: Player • Host • Bulk (printable)
+    Exports: PDF (single / 2-up) • CSV (host draws)
+    Mobile: optimized taps via Pointer Events + touch-action
+    Deploy: static hosting (e.g., GitHub Pages)
   -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Human Bingo</title>
 
-  <!-- Performance hint: preconnect to font origins -->
+  <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;800&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
   <style>
-    /* =========================
-       THEME TOKENS (CSS Custom Properties)
-       ========================= */
     :root{
       --bg1:#86d7ff; --bg2:#142b6f; --bg3:#6f38c5;
       --text:#fff;
@@ -39,27 +26,21 @@
       --accent:#8be9fd;
       --ok:#74f2a3; --warn:#ffd166; --pink:#ff9ccf;
       --radius:18px;
-      --headerH:76px; /* will be recalculated in JS for responsive header */
+      --headerH:76px;
     }
-
-    /* =========================
-       GLOBAL / RESETS
-       ========================= */
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
       margin:0; color:var(--text);
       font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:linear-gradient(160deg,var(--bg1) 0%,var(--bg2) 55%,var(--bg3) 100%);
-      overflow:hidden; /* we manage scroll per "screen" to keep header fixed */
+      overflow:hidden;
     }
 
-    /* Background canvas for “string lights” animation (purely decorative) */
+    /* Global edge string-lights */
     #edgeLights{position:fixed; inset:0; pointer-events:none; z-index:0}
 
-    /* =========================
-       HEADER
-       ========================= */
+    /* Header */
     header{
       position:relative; z-index:3;
       display:flex; align-items:center; justify-content:space-between; gap:16px;
@@ -75,7 +56,6 @@
       display:inline-grid; place-items:center;
       background:conic-gradient(#ff4d4d,#ff9f1c,#ffd166,#06d6a0,#1e90ff,#c77dff,#ff4d4d);
     }
-
     .controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
     .btn{
       background:linear-gradient(180deg,var(--panel),var(--panel2));
@@ -88,7 +68,6 @@
     .btn:active{transform:translateY(0)}
     .pill{border-radius:999px}
 
-    /* Custom select styling */
     .select-wrap{position:relative; display:inline-block}
     select.select{
       appearance:none; -webkit-appearance:none; -moz-appearance:none;
@@ -100,55 +79,42 @@
     .select-wrap::after{content:"▾"; position:absolute; right:12px; top:50%; transform:translateY(-50%); pointer-events:none; color:#fff; opacity:.9}
     select.select option{ color:#111; background:#fff; }
 
-    /* =========================
-       ROUTER (full-viewport sections under header)
-       ========================= */
+    /* Router: full-viewport screens under header */
     main.screen, section.screen{
       position:fixed; top:var(--headerH); left:0; right:0; bottom:0;
       overflow:auto; z-index:1; padding:16px clamp(16px,4vw,40px) 60px; color:#fff; display:none;
     }
     .screen.active{ display:block; }
 
-    /* =========================
-       LANDING
-       ========================= */
+    /* Landing */
     #landing.active{ display:grid; place-items:center; }
     .hero{
       width:min(1040px,96vw);
       text-align:center; color:#fff;
       background:linear-gradient(180deg,rgba(26,35,94,.44),rgba(22,34,92,.44));
-      border:2px solid var(--accent); border-radius:22px; padding:30px 28px 28px;
+      border:2px solid var(--accent); border-radius:22px; padding:36px 28px 30px;
     }
     .hero h1{margin:0 0 6px; font-family:Quicksand,Inter; font-weight:900; font-size:clamp(34px,6vw,56px); color:#fff}
-    .tag{margin:0 6px 14px; font-weight:600; color:#fff}
-
-    .options{
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin-top:18px
-    }
+    .tag{margin:0 6px 18px; font-weight:600; color:#fff}
+    .options{display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; margin-top:18px}
     .choice{
       min-height:110px; padding:22px; text-align:center; font-weight:800; color:#fff;
       border-radius:16px; border:2px solid var(--accent);
       background:linear-gradient(180deg,var(--panel),#1f2f85);
       cursor:pointer; transition:.15s transform, .25s background, .25s border-color;
     }
-    /* MAIN LABEL size bump (+2px only for Player/Host/Bulk titles) */
-    .choice strong{ font-size: calc(1em + 2px); }
+    .choice strong{ font-size: calc(1em + 2px); } /* +2px only for the title line */
     .choice:hover{transform:translateY(-2px)}
     .mini{font-size:12px; color:#fff}
 
-    /* Theme dropdown row (landing-only) */
     .themeRow{display:flex; align-items:center; justify-content:center; gap:8px; margin-top:8px}
     .themeRow .select-wrap select{ padding:8px 32px 8px 12px; font-size:13px }
 
-    /* =========================
-       SELECTABLE STATE HELPERS
-       ========================= */
+    /* Selectable helpers */
     .btn.selectable{min-width:64px}
     .btn.selectable.selected{ background:linear-gradient(180deg,#2156d8,#203fb5); border-color:#fff; }
 
-    /* =========================
-       CARD / BOARD
-       ========================= */
+    /* Cards / board */
     .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:18px}
     .card{
       background:linear-gradient(180deg,#21319b,#1a2676);
@@ -163,6 +129,9 @@
       border:1px solid #ffffff44; border-radius:12px; padding:12px; color:#fff;
       text-align:center; vertical-align:middle; height:56px; font-weight:700; font-size:12.5px;
       line-height:1.2; cursor:pointer; user-select:none;
+      touch-action: manipulation;                 /* instant taps */
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
     }
     .board td.free{
       background: radial-gradient(140px 70px at 50% 40%, var(--warn), var(--pink));
@@ -170,16 +139,12 @@
     }
     .board td.marked{ outline:2px solid var(--ok) }
 
-    /* =========================
-       TOOLBARS
-       ========================= */
+    /* Toolbars */
     .toolbar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:8px 0 16px; color:#fff}
     .seg{display:flex; gap:8px; align-items:center}
     .hint{font-size:12px; color:#fff}
 
-    /* =========================
-       HOST VIEW
-       ========================= */
+    /* Host */
     .host-wrap{max-width:1100px; margin:auto; color:#fff}
     .host-big{
       margin-top:8px; display:grid; place-items:center; height:44vh;
@@ -190,9 +155,7 @@
     .chips{display:flex; gap:8px; flex-wrap:wrap; max-height:28vh; overflow:auto; margin-top:10px}
     .chip{background:#20308f; border:2px solid var(--accent); border-radius:999px; padding:6px 10px; font-size:12px; color:#fff}
 
-    /* =========================
-       MODAL (Rules)
-       ========================= */
+    /* Modal shells (reused for Rules + QR) */
     .rules{position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.42); backdrop-filter:blur(4px); z-index:5}
     .sheet{
       width:min(680px,92vw); background:linear-gradient(180deg,var(--panel),var(--panel2));
@@ -200,21 +163,16 @@
     }
     .sheet h3{margin:0 0 10px; font-family:Quicksand,Inter; font-weight:800; color:#fff}
     .sheet ul{margin:8px 0 0 18px}
-    .sheet .closeRow{display:flex; justify-content:flex-end; margin-top:12px}
+    .sheet .closeRow{display:flex; justify-content:flex-end; margin-top:12px; gap:8px}
 
-    /* =========================
-       CONFETTI LAYER
-       ========================= */
+    /* Confetti */
     .confetti{position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:6}
     .confetti span{position:absolute; width:10px; height:14px; opacity:.95; border-radius:2px; animation:fall 1200ms linear forwards}
     @keyframes fall{to{transform:translateY(100vh) rotate(600deg); opacity:.2}}
 
-    /* Screen reader helper class */
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-    /* =========================
-       PRINT STYLES (cards become light)
-       ========================= */
+    /* Print */
     @media print{
       body{ overflow:visible }
       header, #edgeLights, #landing, #player:not(.active), #host:not(.active), #bulk:not(.active) { display:none !important; }
@@ -226,20 +184,16 @@
   </style>
 </head>
 <body>
-  <!-- Decorative background animation -->
+  <!-- Global string lights -->
   <canvas id="edgeLights" aria-hidden="true"></canvas>
 
-  <!-- =========================
-       HEADER (brand + primary controls)
-       ========================= -->
+  <!-- Header -->
   <header id="appHeader">
     <div class="brand"><span class="dot" aria-hidden="true"></span>Human Bingo</div>
     <div class="controls">
-      <!-- Audio selection (see implementation note in JS about same-origin hosting) -->
       <div class="select-wrap">
         <label class="sr-only" for="musicMode">Music</label>
         <select id="musicMode" class="select" title="Music">
-          <!-- TIP: Replace with relative paths if you add these MP3s to your repo’s /assets folder -->
           <option value="assets/bensound-ukulele.mp3">Bensound Ukulele (MP3)</option>
           <option value="assets/unbreakableresolve.mp3">Unbreakable Resolve (MP3)</option>
           <option value="assets/cute.mp3">Cute (MP3)</option>
@@ -248,18 +202,16 @@
       <button id="musicToggle" class="btn pill" type="button">Music On/Off</button>
       <button id="resetAll" class="btn pill" type="button">Reset</button>
       <button id="openRules" class="btn pill" type="button">Rules</button>
+      <button id="openQR" class="btn pill" type="button">QR</button>
     </div>
   </header>
 
-  <!-- =========================
-       LANDING (mode selection + theme)
-       ========================= -->
+  <!-- Landing -->
   <main id="landing" class="screen active" aria-labelledby="hero-title">
     <div class="hero">
       <h1 id="hero-title">Human Bingo</h1>
       <p class="tag">Break the ice. Build the vibe.</p>
 
-      <!-- Theme selector (landing-only) -->
       <div class="themeRow">
         <span class="mini">Theme:</span>
         <div class="select-wrap">
@@ -272,7 +224,6 @@
         </div>
       </div>
 
-      <!-- Main entrypoints: Player / Host / Bulk -->
       <div class="options">
         <button id="goPlayer" class="choice"><strong>Player</strong><div class="mini">Pick grid on the next screen</div></button>
         <button id="goHost"  class="choice"><strong>Host</strong><div class="mini">Draw Next • Reset • Close</div></button>
@@ -281,9 +232,7 @@
     </div>
   </main>
 
-  <!-- =========================
-       PLAYER VIEW
-       ========================= -->
+  <!-- Player -->
   <section id="player" class="screen" aria-labelledby="player-title">
     <h2 id="player-title" class="sr-only">Player</h2>
     <div class="toolbar">
@@ -303,9 +252,7 @@
     <div id="playerCard"></div>
   </section>
 
-  <!-- =========================
-       HOST VIEW
-       ========================= -->
+  <!-- Host -->
   <section id="host" class="screen" aria-labelledby="host-title">
     <div class="host-wrap">
       <h2 id="host-title" class="sr-only">Host</h2>
@@ -321,9 +268,7 @@
     </div>
   </section>
 
-  <!-- =========================
-       BULK GENERATOR VIEW
-       ========================= -->
+  <!-- Bulk -->
   <section id="bulk" class="screen" aria-labelledby="bulk-title">
     <h2 id="bulk-title" class="sr-only">Bulk Download</h2>
     <div class="toolbar">
@@ -349,9 +294,7 @@
     <div id="bulkGridWrap" class="grid" aria-live="polite"></div>
   </section>
 
-  <!-- =========================
-       RULES MODAL
-       ========================= -->
+  <!-- Rules Modal -->
   <div id="rules" class="rules" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
     <div class="sheet">
       <h3 id="rulesTitle">Human Bingo — Rules</h3>
@@ -367,17 +310,36 @@
     </div>
   </div>
 
-  <!-- Layers for celebration + audio element -->
+  <!-- QR Modal -->
+  <div id="qrModal" class="rules" role="dialog" aria-modal="true" aria-labelledby="qrTitle" style="display:none">
+    <div class="sheet" style="text-align:center">
+      <h3 id="qrTitle">Scan to open Human Bingo</h3>
+      <div id="qrBox" style="display:grid; place-items:center; padding:8px;">
+        <img id="qrImg" alt="QR code for Human Bingo" width="240" height="240"
+             style="border-radius:12px; background:#fff; padding:8px;"/>
+        <div class="mini" style="margin-top:8px; color:#fff">
+          <a id="qrLink" href="#" target="_blank" rel="noopener noreferrer" style="color:#fff; text-decoration:underline;">
+            Open link
+          </a>
+        </div>
+      </div>
+      <div class="closeRow">
+        <button id="copyQRLink" class="btn pill">Copy link</button>
+        <button id="printQR" class="btn pill">Print</button>
+        <button id="closeQR" class="btn pill">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confetti + audio -->
   <div id="confetti" class="confetti" aria-hidden="true"></div>
   <audio id="bgAudio" preload="none" loop></audio>
 
-  <!-- jsPDF (for vector PDF export) -->
+  <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
   <script>
-    /* ============================================================
-       LAYOUT UTIL: Keep --headerH in sync with real header height
-       ============================================================ */
+    /* ---------- Header height -> screen fit ---------- */
     function setHeaderHeightVar(){
       const h=document.getElementById('appHeader').offsetHeight;
       document.documentElement.style.setProperty('--headerH', h+'px');
@@ -385,21 +347,16 @@
     addEventListener('resize', setHeaderHeightVar);
     addEventListener('DOMContentLoaded', setHeaderHeightVar);
 
-    /* ============================================================
-       DECOR: Animated “string lights” on the page edges
-       - Lightweight canvas animation; detached from main app logic
-       ============================================================ */
+    /* ---------- Edge string lights (regular colors) ---------- */
     (() => {
       let c, ctx, dpr=1;
       const palette=['#ff4d4d','#ff9f1c','#ffd166','#06d6a0','#1e90ff','#c77dff'];
-
       function size(){
         c=document.getElementById('edgeLights'); dpr=window.devicePixelRatio||1;
         c.width=Math.floor(innerWidth*dpr); c.height=Math.floor(innerHeight*dpr);
         c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px';
         ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
       }
-
       function draw(t){
         if(!ctx) return requestAnimationFrame(draw);
         const W=c.width/dpr, H=c.height/dpr; ctx.clearRect(0,0,W,H);
@@ -409,7 +366,6 @@
           {y:H/1.95,amp:52,phase:2.6},{y:H/1.62,amp:44,phase:1.5},{y:H/1.38,amp:36,phase:0.7}
         ];
         const spacing=86;
-
         strings.forEach((s,i)=>{
           ctx.beginPath();
           for(let x=0;x<=W;x+=8){
@@ -417,7 +373,6 @@
             x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
           }
           ctx.stroke();
-
           for(let x=0;x<=W;x+=spacing){
             const y=s.y+Math.sin((x/240)+(t/1200)+s.phase)*s.amp;
             const col=palette[(Math.floor(x/spacing)+i)%palette.length];
@@ -429,82 +384,74 @@
         });
         requestAnimationFrame(draw);
       }
-
       addEventListener('resize', size);
       addEventListener('DOMContentLoaded', ()=>{ size(); requestAnimationFrame(draw); });
     })();
 
-    /* ============================================================
-       GAME PROMPTS (50)
-       - Keep list short/safe for PDF by avoiding emojis or long lines
-       ============================================================ */
-const PROMPTS = [
-  "Who is wearing mismatched socks? 🧦🧦",
-  "Who has a pen clipped to their shirt? 🖊️👔",
-  "Who has bright colored shoelaces? 👟🌈",
-  "Who has nail polish on? 💅",
-  "Who in the room is carrying a receipt? 🧾",
-  "Who has their phone on silent right now? 🔕📱",
-  "Who can show a selfie with a pet? 🐶🐱🤳",
-  "Who is wearing our company-branded shirt? 👕🏢",
-  "Has waved goodbye then couldn’t find the “Leave” button 🙃😎",
-  "Who has a ring on their finger? 💍",
-  "Who has more than 100 unread notifications/emails? 📧📱😵🙈😄",
-  "Who is carrying a five dollar bill? 💵5️⃣",
-  "Can freeze perfectly like a laggy video for 15 seconds 🗽😄",
-  "Who has a photo of their family or kids as their wallpaper? 👨‍👩‍👧‍👦📱",
-  "Can name five Gen Z slang words 🧠⚡",
-  "Knows ASL 🤟",
-  "Faked illness for a leave 😷🤫",
-  "Can imitate a teammate/manager's signature meeting greeting (with consent) 🎭🤝",
-  "Went viral online 📈🔥",
-  "Owns a gaming computer 🖥️🎮",
-  "Knows how to Dance 💃🕺",
-  "Has an unusual family (fun) tradition 🎎🎉",
-  "Loves true crime podcasts 🎧🕵️‍♂️",
-  "Likes pineapple on pizza 🍍🍕",
-  "Been on a bad (blind) date 🙈😬",
-  "Proposed to spouse in public 💞💍🎤",
-  "Has a calendar block called 'Focus' that is 90% not focusing 🎯😅🙃",
-  "Loves roller coasters 🎢",
-  "Does Yoga 🧘",
-  "Can do a cartwheel 🤸",
-  "Has a snack hidden in their bag/desk 🍫🍪",
-  "Knows martial arts (show us one) 🥋",
-  "Can make a paper airplane in under a minute (first five to raise a hand get a sheet of paper) 🛩️📄",
-  "Attended a concert this year 🎶🎤",
-  "Has 3 coins (any currency) 🪙🪙🪙",
-  "Can name 5 keyboard shortcuts without looking ⌨️5️⃣🏆",
-  "Been on a road trip 🚗🗺️",
-  "Screams during scary movies 😱🎥😂",
-  "Loves karaoke 🎤🎵",
-  "Has a folder named “final_final_FINAL” (and it isn’t final) 😂🤣",
-  "Keeps screen brightness at sun or cave; no in-between  ☀️⚫ 😂",
-  "Has been skydiving 🪂",
-  "Ignores mails from HR 😎📧🙈",
-  "Wearing Pink/Green shirt 👚👕💖❤️",
-  "Has taken a selfie today 🤳",
-  "Same birth month as their partner ❤️🎂",
-  "Ready to gift me $100 😂💰💵",
-  "Owns a cable that fits nothing they currently own 🗄️🙃😂",
-  "Has a lipstick/makeup product with them 💄",
-  "Can do 10 pushups 💪🔟"
-];
+    /* ---------- Prompts (50) — emojis allowed; PDFs strip them ---------- */
+    const PROMPTS = [
+      "Who is wearing mismatched socks? 🧦🧦",
+      "Who has a pen clipped to their shirt? 🖊️👔",
+      "Who has bright colored shoelaces? 👟🌈",
+      "Who has nail polish on? 💅",
+      "Who in the room is carrying a receipt? 🧾",
+      "Who has their phone on silent right now? 🔕📱",
+      "Who can show a selfie with a pet? 🐶🐱🤳",
+      "Who is wearing our company-branded shirt? 👕🏢",
+      "Has waved goodbye then couldn’t find the “Leave” button 🙃😎",
+      "Who has a ring on their finger? 💍",
+      "Who has more than 100 unread notifications/emails? 📧📱😵🙈😄",
+      "Who is carrying a five dollar bill? 💵5️⃣",
+      "Can freeze perfectly like a laggy video for 15 seconds 🗽😄",
+      "Who has a photo of their family or kids as their wallpaper? 👨‍👩‍👧‍👦📱",
+      "Can name five Gen Z slang words 🧠⚡",
+      "Knows ASL 🤟",
+      "Faked illness for a leave 😷🤫",
+      "Can imitate a teammate/manager's signature meeting greeting (with consent) 🎭🤝",
+      "Went viral online 📈🔥",
+      "Owns a gaming computer 🖥️🎮",
+      "Knows how to Dance 💃🕺",
+      "Has an unusual family (fun) tradition 🎎🎉",
+      "Loves true crime podcasts 🎧🕵️‍♂️",
+      "Likes pineapple on pizza 🍍🍕",
+      "Been on a bad (blind) date 🙈😬",
+      "Proposed to spouse in public 💞💍🎤",
+      "Has a calendar block called 'Focus' that is 90% not focusing 🎯😅🙃",
+      "Loves roller coasters 🎢",
+      "Does Yoga 🧘",
+      "Can do a cartwheel 🤸",
+      "Has a snack hidden in their bag/desk 🍫🍪",
+      "Knows martial arts (show us one) 🥋",
+      "Can make a paper airplane in under a minute (first five to raise a hand get a sheet of paper) 🛩️📄",
+      "Attended a concert this year 🎶🎤",
+      "Has 3 coins (any currency) 🪙🪙🪙",
+      "Can name 5 keyboard shortcuts without looking ⌨️5️⃣🏆",
+      "Been on a road trip 🚗🗺️",
+      "Screams during scary movies 😱🎥😂",
+      "Loves karaoke 🎤🎵",
+      "Has a folder named “final_final_FINAL” (and it isn’t final) 😂🤣",
+      "Keeps screen brightness at sun or cave; no in-between  ☀️⚫ 😂",
+      "Has been skydiving 🪂",
+      "Ignores mails from HR 😎📧🙈",
+      "Wearing Pink/Green shirt 👚👕💖❤️",
+      "Has taken a selfie today 🤳",
+      "Same birth month as their partner ❤️🎂",
+      "Ready to gift me $100 😂💰💵",
+      "Owns a cable that fits nothing they currently own 🗄️🙃😂",
+      "Has a lipstick/makeup product with them 💄",
+      "Can do 10 pushups 💪🔟"
+    ];
 
-    /* ============================================================
-       HELPERS / ROUTER
-       ============================================================ */
+    /* ---------- Helpers & Router ---------- */
     const $=(s,el=document)=>el.querySelector(s);
     const $$=(s,el=document)=>Array.from(el.querySelectorAll(s));
     const rand=n=>Math.floor(Math.random()*n);
     const shuffle=a=>a.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]);
     const pickPrompts=n=>shuffle(PROMPTS.slice()).slice(0,n);
 
-    /* Very lightweight screen router */
     const screens={landing:$('#landing'), player:$('#player'), host:$('#host'), bulk:$('#bulk')};
     function show(id){ Object.values(screens).forEach(el=>el.classList.remove('active')); screens[id].classList.add('active'); }
 
-    /* Entry buttons */
     $('#goPlayer').addEventListener('click', ()=>show('player'));
     $('#goHost').addEventListener('click', ()=>{ resetDraws(); show('host'); });
     $('#goBulk').addEventListener('click', ()=>{ $('#bulkGridWrap').innerHTML=''; $('#bulkDownload').style.display='none'; show('bulk'); });
@@ -512,9 +459,7 @@ const PROMPTS = [
     $('#closeHost').addEventListener('click', ()=>show('landing'));
     $('#closeBulk').addEventListener('click', ()=>show('landing'));
 
-    /* ============================================================
-       THEME SYSTEM (persisted in localStorage)
-       ============================================================ */
+    /* ---------- Theme system ---------- */
     const THEMES = {
       blue:  { bg1:'#86d7ff', bg2:'#142b6f', bg3:'#6f38c5', panel:'#223296', panel2:'#1b287a', accent:'#8be9fd' },
       green: { bg1:'#baf7d6', bg2:'#0b4f3b', bg3:'#2a9d8f', panel:'#0e5a45', panel2:'#0a4635', accent:'#9ef7c1' },
@@ -536,11 +481,9 @@ const PROMPTS = [
       themeSel.addEventListener('change', e=>applyTheme(e.target.value));
     }
 
-    /* ============================================================
-       CARD FACTORY (DOM -> interactive tables)
-       ============================================================ */
+    /* ---------- Card factory ---------- */
     function buildBoard(size,onToggle){
-      const free=size===5;                            // FREE center only on 5×5
+      const free=size===5;
       const need=size*size-(free?1:0);
       const prompts=pickPrompts(need);
       const tbl=document.createElement('table'); tbl.dataset.size=String(size); let i=0;
@@ -549,14 +492,35 @@ const PROMPTS = [
         const tr=document.createElement('tr');
         for(let c=0;c<size;c++){
           const td=document.createElement('td'); td.dataset.r=r; td.dataset.c=c;
+
+          // a11y + initial state
+          td.setAttribute('role','button');
+          td.tabIndex = 0;
+          td.setAttribute('aria-pressed','false');
+
           if(free && r===Math.floor(size/2) && c===Math.floor(size/2)){
-            td.textContent='FREE'; td.classList.add('free','marked');
+            td.textContent='FREE';
+            td.classList.add('free','marked');
+            td.setAttribute('aria-pressed','true');
           } else {
             td.textContent=prompts[i++];
           }
-          const toggle=()=>{ td.classList.toggle('marked'); onToggle && onToggle(tbl,td); };
-          td.addEventListener('click',toggle,{passive:true});
-          td.addEventListener('touchstart',toggle,{passive:true});
+
+          const toggle = () => {
+            const marked = td.classList.toggle('marked');
+            td.setAttribute('aria-pressed', marked ? 'true' : 'false');
+            onToggle && onToggle(tbl, td);
+          };
+
+          // Single input path for mouse/touch/pen
+          if (window.PointerEvent) td.addEventListener('pointerup', toggle);
+          else td.addEventListener('click', toggle);
+
+          // Keyboard
+          td.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+          });
+
           tr.appendChild(td);
         }
         tbl.appendChild(tr);
@@ -567,32 +531,25 @@ const PROMPTS = [
     function makeCard(idx,size,title,onToggle){
       const card=document.createElement('div'); card.className='card';
       const head=document.createElement('div'); head.className='card-header';
-      head.innerHTML=`<div class="card-title">${title} <span class="mini">Card #${idx+1}</span></div><div class="mini">v2.8</div>`;
+      head.innerHTML=`<div class="card-title">${title} <span class="mini">Card #${idx+1}</span></div><div class="mini">v2.9</div>`;
       const body=document.createElement('div'); body.className='board';
       body.appendChild(buildBoard(size,onToggle));
       card.appendChild(head); card.appendChild(body);
       return card;
     }
 
-    /* ============================================================
-       PLAYER MODE (achievements + undo + PDF)
-       ============================================================ */
+    /* ---------- Player mode ---------- */
     let undoStack=[], playerSize=null, achieved={line:false,bottom:false,diag:false,full:false};
     function resetAchievements(){ achieved={line:false,bottom:false,diag:false,full:false}; }
 
-    /* Compute achievements from the “marked” cells on a table */
     function checkAchievements(tbl){
       const n=+tbl.dataset.size, rows=Array(n).fill(0), cols=Array(n).fill(0); let d1=0,d2=0;
-      $$('.marked',tbl).forEach(td=>{
-        const r=+td.dataset.r,c=+td.dataset.c;
-        rows[r]++; cols[c]++; if(r===c) d1++; if(r+c===n-1) d2++;
-      });
+      $$('.marked',tbl).forEach(td=>{ const r=+td.dataset.r,c=+td.dataset.c; rows[r]++; cols[c]++; if(r===c) d1++; if(r+c===n-1) d2++; });
       const total=$$('.marked',tbl).length;
       const line=rows.some(v=>v===n)||cols.some(v=>v===n);
       const bottom=rows[n-1]===n;
       const diag=(d1===n||d2===n);
       const full=(total===n*n);
-
       if(bottom && !achieved.bottom){achieved.bottom=true; confetti('Bottom Line!');}
       if(line && !achieved.line){achieved.line=true; confetti('Line Complete!');}
       if(diag && !achieved.diag){achieved.diag=true; confetti('Diagonal!');}
@@ -603,62 +560,46 @@ const PROMPTS = [
       const mount=$('#playerCard'); mount.innerHTML='';
       if(playerSize==null) return;
       undoStack=[]; resetAchievements();
-      mount.appendChild(
-        makeCard(0,playerSize,'Your Human Bingo Card',(tbl,td)=>{
-          undoStack.push(td); if(undoStack.length>300) undoStack.shift();
-          checkAchievements(tbl);
-        })
-      );
+      mount.appendChild(makeCard(0,playerSize,'Your Human Bingo Card',(tbl,td)=>{ undoStack.push(td); if(undoStack.length>300) undoStack.shift(); checkAchievements(tbl); }));
     }
-
-    /* Player controls */
     $('.gridPick[data-size="3"]').addEventListener('click',()=>{playerSize=3; renderPlayerCard();});
     $('.gridPick[data-size="4"]').addEventListener('click',()=>{playerSize=4; renderPlayerCard();});
     $('.gridPick[data-size="5"]').addEventListener('click',()=>{playerSize=5; renderPlayerCard();});
     $('#undo').addEventListener('click',()=>{const last=undoStack.pop(); if(last) last.classList.toggle('marked');});
     $('#resetPlayer').addEventListener('click',()=>{playerSize=null; renderPlayerCard();});
 
-    /* ============================================================
-       PDF HELPERS (sanitize, table extraction, drawing)
-       ============================================================ */
+    /* ---------- PDF helpers ---------- */
     function sanitizeForPDF(str){
-      // Remove “fancy” quotes/dashes and any unsupported glyphs/emojis
       if(!str) return '';
       str = str.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,'-');
-      str = str.replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu,'');
-      str = str.replace(/[^\x09\x0A\x0D\x20-\x7E]/g,'');
+      str = str.replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu,''); // strip emojis/ZWJ/VS
+      str = str.replace(/[^\x09\x0A\x0D\x20-\x7E]/g,'');                 // ASCII-only
       return str.trim();
     }
-
     function extractBoardFromTable(tableEl){
       const rows=[...tableEl.querySelectorAll('tr')];
       const n=rows.length;
       const data=rows.map(tr=>[...tr.children].map(td=>td.textContent.trim()));
       return {size:n, cells:data};
     }
-
-    /* Single ticket per page (Player) */
     function drawTicketTablePDF(pdf, title, cells){
       const n=cells.length;
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
       const outerMargin = 28;
       const headerH = 44;
-
       const maxW = pageW - outerMargin*2;
       const maxH = pageH - outerMargin*2 - headerH;
       const tableSize = Math.min(maxW, maxH);
       const x0 = (pageW - tableSize)/2;
       const y0 = outerMargin + headerH;
 
-      // Header
       pdf.setFont('helvetica','bold'); pdf.setFontSize(18);
       const titleW = pdf.getTextWidth('Human Bingo');
       pdf.text('Human Bingo', (pageW-titleW)/2, outerMargin + 18);
       pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
       pdf.text(sanitizeForPDF(title), outerMargin, outerMargin + 18);
 
-      // Grid
       const cell = tableSize / n;
       pdf.setDrawColor(0); pdf.setLineWidth(1.2);
       pdf.rect(x0, y0, tableSize, tableSize);
@@ -667,8 +608,6 @@ const PROMPTS = [
         pdf.line(x0, y0 + i*cell, x0 + tableSize, y0 + i*cell);
         pdf.line(x0 + i*cell, y0, x0 + i*cell, y0 + tableSize);
       }
-
-      // Cell text
       pdf.setFont('helvetica','normal'); pdf.setFontSize(12);
       const pad = 6, lineH=12;
       for(let r=0;r<n;r++){
@@ -682,8 +621,6 @@ const PROMPTS = [
         }
       }
     }
-
-    /* Reusable drawer: draw a ticket inside an arbitrary rect (for 2-up) */
     function drawTicketInRect(pdf, title, cells, rx, ry, rw, rh){
       const n=cells.length;
       const headerH = 24;
@@ -716,7 +653,7 @@ const PROMPTS = [
       }
     }
 
-    /* Player: Download current ticket as PDF */
+    /* Player: Download current ticket */
     function playerDownloadPDF(){
       const table=$('#playerCard table');
       if(!table){ alert('Create a card first.'); return; }
@@ -728,16 +665,9 @@ const PROMPTS = [
     }
     $('#dlPlayer').addEventListener('click', playerDownloadPDF);
 
-    /* ============================================================
-       HOST MODE (draw/reset + CSV export)
-       ============================================================ */
+    /* ---------- Host mode ---------- */
     let deck=[], drawn=[];
-    function resetDraws(){
-      deck=PROMPTS.slice(0,50); drawn=[];
-      $('#hostCurrent').textContent='Press “Draw Next” to begin';
-      $('#drawnCount').textContent='0';
-      $('#calledChips').innerHTML='';
-    }
+    function resetDraws(){ deck=PROMPTS.slice(0,50); drawn=[]; $('#hostCurrent').textContent='Press “Draw Next” to begin'; $('#drawnCount').textContent='0'; $('#calledChips').innerHTML=''; }
     function drawNext(){
       if(deck.length===0){ $('#hostCurrent').textContent='All prompts have been drawn!'; return; }
       const idx=rand(deck.length), prompt=deck.splice(idx,1)[0]; drawn.push(prompt);
@@ -747,7 +677,6 @@ const PROMPTS = [
     $('#drawNext').addEventListener('click',drawNext);
     $('#resetDraw').addEventListener('click',resetDraws);
 
-    /* Host: “Download Excel” = CSV for broad compatibility */
     function downloadHostCSV(){
       if(drawn.length===0){ alert('Draw some cards first.'); return; }
       const rows=[['Serial Number','Card'], ...drawn.map((p,i)=>[i+1, p])];
@@ -758,21 +687,15 @@ const PROMPTS = [
     }
     $('#dlHost').addEventListener('click', downloadHostCSV);
 
-    /* ============================================================
-       BULK GENERATOR (preview + 2-up multi-page PDF)
-       ============================================================ */
+    /* ---------- Bulk generator ---------- */
     let bulkCount=null, bulkSize=null;
-
-    /* Selection state management helper */
     function markSelected(groupSel, el){
       $$(groupSel).forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
       el.classList.add('selected'); el.setAttribute('aria-pressed','true');
     }
-
     $$('.count').forEach(b=>b.addEventListener('click',()=>{ bulkCount=+b.dataset.count; markSelected('.count', b); }));
     $$('.bulkGrid').forEach(b=>b.addEventListener('click',()=>{ bulkSize=+b.dataset.size; markSelected('.bulkGrid', b); }));
 
-    /* Generate preview grid (DOM only) */
     $('#bulkMake').addEventListener('click',()=>{
       if(!bulkCount || !bulkSize){ alert('Select both Cards and Grid.'); return; }
       const wrap=$('#bulkGridWrap'); wrap.innerHTML='';
@@ -780,7 +703,6 @@ const PROMPTS = [
       const btn=$('#bulkDownload'); btn.style.display='inline-block'; btn.style.borderColor='#fff';
     });
 
-    /* Download 2-up PDF: two tickets per page, emoji-free text */
     function downloadBulkPDF(){
       const cards = $$('#bulkGridWrap .card');
       if(cards.length===0){ alert('Generate a preview first.'); return; }
@@ -816,13 +738,40 @@ const PROMPTS = [
     }
     $('#bulkDownload').addEventListener('click', downloadBulkPDF);
 
-    /* ============================================================
-       RULES, CONFETTI, MUSIC, RESET
-       ============================================================ */
+    /* ---------- Rules, QR, Confetti, Music, Reset ---------- */
     $('#openRules').addEventListener('click',()=>$('#rules').style.display='flex');
     $('#closeRules').addEventListener('click',()=>$('#rules').style.display='none');
 
-    /* Minimal celebratory confetti overlay with message */
+    // QR modal
+    const APP_URL = (new URL('.', location.href)).href; // current page base (no hash/query)
+    const QR_API  = 'https://api.qrserver.com/v1/create-qr-code/';
+    function openQR(){
+      const src = `${QR_API}?size=240x240&data=${encodeURIComponent(APP_URL)}`;
+      $('#qrImg').src = src;
+      $('#qrLink').href = APP_URL;
+      $('#qrModal').style.display = 'flex';
+    }
+    $('#openQR').addEventListener('click', openQR);
+    $('#closeQR').addEventListener('click', ()=> $('#qrModal').style.display='none');
+    $('#copyQRLink').addEventListener('click', async ()=>{
+      try { await navigator.clipboard.writeText(APP_URL); alert('Link copied!'); }
+      catch { alert(APP_URL); }
+    });
+    $('#printQR').addEventListener('click', ()=>{
+      const src = $('#qrImg').src || `${QR_API}?size=240x240&data=${encodeURIComponent(APP_URL)}`;
+      const w = window.open('', '_blank', 'width=360,height=420');
+      w.document.write(`
+        <title>Human Bingo QR</title>
+        <div style="text-align:center; font:14px sans-serif; padding:14px;">
+          <img src="${src}" width="240" height="240"
+               style="display:block; margin:10px auto; border:1px solid #ccc; padding:8px; background:#fff; border-radius:8px"/>
+          <div>${APP_URL}</div>
+        </div>
+      `);
+      w.document.close(); w.focus(); w.print();
+      setTimeout(()=> w.close(), 600);
+    });
+
     function confetti(msg){
       const layer=$('#confetti'); layer.innerHTML='';
       const banner=document.createElement('div');
@@ -831,44 +780,25 @@ const PROMPTS = [
       banner.style.background='linear-gradient(180deg,var(--panel),var(--panel2))';
       banner.style.fontFamily='Quicksand,Inter'; banner.style.fontWeight='800'; banner.style.color='#fff'; banner.textContent=msg;
       layer.appendChild(banner);
-
       const colors=['#ff4d4d','#ffd166','#06d6a0','#1e90ff','#c77dff'];
-      for(let i=0;i<110;i++){
-        const s=document.createElement('span');
-        s.style.left=(Math.random()*100)+'vw';
-        s.style.top='-10px';
-        s.style.background=colors[i%colors.length];
-        s.style.animationDelay=(Math.random()*280)+'ms';
-        layer.appendChild(s);
-      }
+      for(let i=0;i<110;i++){ const s=document.createElement('span'); s.style.left=(Math.random()*100)+'vw'; s.style.top='-10px'; s.style.background=colors[i%colors.length]; s.style.animationDelay=(Math.random()*280)+'ms'; layer.appendChild(s); }
       setTimeout(()=>{ layer.innerHTML=''; },2100);
     }
 
-    /* Background music (HTMLAudioElement). Implementation note:
-       For best results on GitHub Pages, store MP3s in /assets and use relative
-       URLs in the <select>. Direct “blob”/raw GitHub view links may not serve
-       with correct headers for autoplay or CORS. */
     const audio=$('#bgAudio'); audio.volume=0.6; let isPlaying=false;
+    audio.addEventListener('error',()=>alert('Audio file not found. Check your assets/ paths and filenames.'));
     function setTrack(src){ audio.pause(); isPlaying=false; audio.src=src; }
     function toggleMusic(){
       if(!audio.src){ setTrack($('#musicMode').value); }
-      if(!isPlaying){
-        audio.play().then(()=>{ isPlaying=true; }).catch(()=>{
-          alert('Could not play audio. Ensure the MP3 files are accessible and, ideally, hosted in the same repo (same origin).');
-        });
-      } else {
-        audio.pause(); isPlaying=false;
-      }
+      if(!isPlaying){ audio.play().then(()=>{ isPlaying=true; }).catch(()=>{ alert('Could not play audio. Ensure MP3s are in assets/ and you have tapped once.'); }); }
+      else{ audio.pause(); isPlaying=false; }
     }
     $('#musicMode').addEventListener('change', e=>{ setTrack(e.target.value); if(isPlaying){ audio.play().catch(()=>{}); }});
     $('#musicToggle').addEventListener('click', toggleMusic);
 
-    /* Global reset: clears state across all modes */
     function resetAll(){
       audio.pause(); isPlaying=false;
-      // If you move MP3s local, you can set a matching default value here.
-      $('#musicMode').value='assets/bensound-ukulele.mp3';  // NOTE: only effective if options use relative URLs
-      setTrack('assets/bensound-ukulele.mp3');              // (left as-is to avoid changing behavior)
+      $('#musicMode').value='assets/bensound-ukulele.mp3'; setTrack('assets/bensound-ukulele.mp3');
       show('landing'); playerSize=null; renderPlayerCard(); resetDraws();
       $('#bulkGridWrap').innerHTML=''; $('#bulkDownload').style.display='none';
       $$('.count, .bulkGrid').forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
@@ -876,19 +806,11 @@ const PROMPTS = [
     }
     $('#resetAll').addEventListener('click', resetAll);
 
-    /* ============================================================
-       APP INIT
-       ============================================================ */
+    /* ---------- Init ---------- */
     document.addEventListener('DOMContentLoaded', ()=>{
-      show('landing');           // default screen
-      resetDraws();              // initialize host deck
-      setTrack('assets/bensound-ukulele.mp3'); // see note above regarding same-origin files
-      setHeaderHeightVar();
-
-      // Theme init (persist across sessions)
+      show('landing'); resetDraws(); setTrack('assets/bensound-ukulele.mp3'); setHeaderHeightVar();
       const saved = localStorage.getItem('hb_theme') || 'blue';
-      if(themeSel){ themeSel.value = saved; }
-      applyTheme(saved);
+      if(themeSel){ themeSel.value = saved; } applyTheme(saved);
     });
   </script>
 </body>
