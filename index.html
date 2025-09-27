@@ -187,9 +187,11 @@
 </head>
 <body>
   <!-- Background Video -->
-  <video id="bgVideo" autoplay muted loop playsinline aria-hidden="true">
-    <source src="assets/background.mp4" type="https://github.com/MandeepKourSardarni/Human_Bingo/blob/main/assets/Play1.mp4" />
-    <!-- Fallback text -->
+  <video id="bgVideo" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+    <!-- Prefer local file if deployed (fastest) -->
+    <source src="assets/Play1.mp4" type="video/mp4" />
+    <!-- Raw GitHub fallback (use raw.githubusercontent.com, not the repo HTML page) -->
+    <source src="https://raw.githubusercontent.com/MandeepKourSardarni/Human_Bingo/main/assets/Play1.mp4" type="video/mp4" />
   </video>
 
   <!-- Header -->
@@ -775,6 +777,17 @@
       show('landing'); resetDraws(); setTrack('assets/bensound-ukulele.mp3'); setHeaderHeightVar();
       const saved = localStorage.getItem('hb_theme') || 'blue';
       if(themeSel){ themeSel.value = saved; } applyTheme(saved);
+
+      // Try to start background video (some browsers delay until a gesture)
+      const vid = document.getElementById('bgVideo');
+      if (vid) {
+        const tryPlay = () => vid.play().catch(()=>{});
+        tryPlay();
+        // Start on first user interaction if autoplay was blocked
+        const kick = () => { tryPlay(); document.removeEventListener('pointerdown', kick); document.removeEventListener('touchstart', kick); };
+        document.addEventListener('pointerdown', kick, { once:true });
+        document.addEventListener('touchstart', kick, { once:true });
+      }
     });
   </script>
 </body>
