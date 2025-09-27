@@ -2,12 +2,11 @@
 <html lang="en">
 <head>
   <!--
-    Human Bingo — Single-file Web App
+    Human Bingo — Single-file Web App (Video background edition)
     -------------------------------------------------------------
-    Modes: Player • Host • Bulk (printable)
-    Exports: PDF (single / 2-up) • CSV (host draws)
-    Mobile: optimized taps via Pointer Events + touch-action
-    Deploy: static hosting (e.g., GitHub Pages)
+    Changes in this version:
+    - Adds a full-viewport looping background <video> across all screens
+    - Removes the string/carnival lights canvas + script
   -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -20,7 +19,7 @@
 
   <style>
     :root{
-      --bg1:#86d7ff; --bg2:#142b6f; --bg3:#6f38c5;
+      --bg1:#000; --bg2:#000; --bg3:#000;              /* fallback behind video */
       --text:#fff;
       --panel:#223296; --panel2:#1b287a;
       --accent:#8be9fd;
@@ -37,8 +36,8 @@
       overflow:hidden;
     }
 
-    /* Global edge string-lights */
-    #edgeLights{position:fixed; inset:0; pointer-events:none; z-index:0}
+    /* Full-viewport background video */
+    #bgVideo{position:fixed; inset:0; width:100%; height:100%; object-fit:cover; z-index:-1; filter:brightness(.6);} /* darken for text contrast */
 
     /* Header */
     header{
@@ -49,7 +48,7 @@
     .brand{
       display:flex; align-items:center; gap:12px;
       font-family:Quicksand,Inter; font-weight:800; letter-spacing:.2px;
-      font-size:clamp(18px,3.2vw,26px); color:#fff;
+      font-size:clamp(18px,3.2vw,26px); color:#fff
     }
     .brand .dot{
       width:30px; height:30px; border-radius:50%;
@@ -93,6 +92,7 @@
       text-align:center; color:#fff;
       background:linear-gradient(180deg,rgba(26,35,94,.44),rgba(22,34,92,.44));
       border:2px solid var(--accent); border-radius:22px; padding:36px 28px 30px;
+      backdrop-filter: blur(4px);
     }
     .hero h1{margin:0 0 6px; font-family:Quicksand,Inter; font-weight:900; font-size:clamp(34px,6vw,56px); color:#fff}
     .tag{margin:0 6px 18px; font-weight:600; color:#fff}
@@ -119,6 +119,7 @@
     .card{
       background:linear-gradient(180deg,#21319b,#1a2676);
       border:1px solid #ffffff2a; border-radius:var(--radius); color:#fff; overflow:hidden;
+      backdrop-filter: blur(3px);
     }
     .card-header{display:flex; justify-content:space-between; align-items:center; padding:14px; color:#fff}
     .card-title{font-weight:800; color:#fff}
@@ -150,6 +151,7 @@
       margin-top:8px; display:grid; place-items:center; height:44vh;
       background:linear-gradient(180deg,#2233a8,#1a2a86);
       border:2px solid var(--accent); border-radius:22px; padding:18px; text-align:center; color:#fff;
+      backdrop-filter: blur(3px);
     }
     .host-current{font-size:clamp(22px,3.6vw,42px); font-weight:900; color:#fff}
     .chips{display:flex; gap:8px; flex-wrap:wrap; max-height:28vh; overflow:auto; margin-top:10px}
@@ -175,7 +177,7 @@
     /* Print */
     @media print{
       body{ overflow:visible }
-      header, #edgeLights, #landing, #player:not(.active), #host:not(.active), #bulk:not(.active) { display:none !important; }
+      header, #landing, #player:not(.active), #host:not(.active), #bulk:not(.active), #bgVideo { display:none !important; }
       .screen{ position:static; inset:auto; display:block; }
       .card{ border:1px solid #0002 }
       .board td{ color:#000; background:#fff; border-color:#0003 }
@@ -184,8 +186,11 @@
   </style>
 </head>
 <body>
-  <!-- Global string lights -->
-  <canvas id="edgeLights" aria-hidden="true"></canvas>
+  <!-- Background Video -->
+  <video id="bgVideo" autoplay muted loop playsinline aria-hidden="true">
+    <source src="assets/background.mp4" type="https://github.com/MandeepKourSardarni/Human_Bingo/blob/main/assets/Play1.mp4" />
+    <!-- Fallback text -->
+  </video>
 
   <!-- Header -->
   <header id="appHeader">
@@ -346,47 +351,6 @@
     }
     addEventListener('resize', setHeaderHeightVar);
     addEventListener('DOMContentLoaded', setHeaderHeightVar);
-
-    /* ---------- Edge string lights (regular colors) ---------- */
-    (() => {
-      let c, ctx, dpr=1;
-      const palette=['#ff4d4d','#ff9f1c','#ffd166','#06d6a0','#1e90ff','#c77dff'];
-      function size(){
-        c=document.getElementById('edgeLights'); dpr=window.devicePixelRatio||1;
-        c.width=Math.floor(innerWidth*dpr); c.height=Math.floor(innerHeight*dpr);
-        c.style.width=innerWidth+'px'; c.style.height=innerHeight+'px';
-        ctx=c.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-      }
-      function draw(t){
-        if(!ctx) return requestAnimationFrame(draw);
-        const W=c.width/dpr, H=c.height/dpr; ctx.clearRect(0,0,W,H);
-        ctx.lineWidth=2; ctx.strokeStyle='rgba(255,255,255,.22)';
-        const strings=[
-          {y:H/5.2,amp:36,phase:0},{y:H/3.1,amp:48,phase:1},{y:H/2.25,amp:60,phase:2},
-          {y:H/1.95,amp:52,phase:2.6},{y:H/1.62,amp:44,phase:1.5},{y:H/1.38,amp:36,phase:0.7}
-        ];
-        const spacing=86;
-        strings.forEach((s,i)=>{
-          ctx.beginPath();
-          for(let x=0;x<=W;x+=8){
-            const y=s.y+Math.sin((x/240)+(t/1200)+s.phase)*s.amp;
-            x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-          }
-          ctx.stroke();
-          for(let x=0;x<=W;x+=spacing){
-            const y=s.y+Math.sin((x/240)+(t/1200)+s.phase)*s.amp;
-            const col=palette[(Math.floor(x/spacing)+i)%palette.length];
-            const pulse=(Math.sin((t/700)+x/200+i)+1)/2; const r=4.8+pulse*1.6;
-            ctx.save(); ctx.globalAlpha=.68+pulse*.22; ctx.fillStyle=col; ctx.shadowColor=col; ctx.shadowBlur=12+pulse*22;
-            ctx.beginPath(); ctx.arc(x,y,r+1.6,0,Math.PI*2); ctx.fill(); ctx.restore();
-            ctx.beginPath(); ctx.fillStyle=col; ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-          }
-        });
-        requestAnimationFrame(draw);
-      }
-      addEventListener('resize', size);
-      addEventListener('DOMContentLoaded', ()=>{ size(); requestAnimationFrame(draw); });
-    })();
 
     /* ---------- Prompts (50) — emojis allowed; PDFs strip them ---------- */
     const PROMPTS = [
@@ -679,7 +643,7 @@
 
     function downloadHostCSV(){
       if(drawn.length===0){ alert('Draw some cards first.'); return; }
-      const rows=[['Serial Number','Card'], ...drawn.map((p,i)=>[i+1, p])];
+      const rows=[["Serial Number","Card"], ...drawn.map((p,i)=>[i+1, p])];
       const csv='\uFEFF' + rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
       const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='human-bingo-draws.csv'; a.click();
